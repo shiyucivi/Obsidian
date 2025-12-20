@@ -50,8 +50,8 @@ let表示声明一个变量，mut`示这个变量是可变类型的变量。
 
 &表示参数是一个引用，并将guess作为一个引用传入这个方法的参数。
 
-read_line方法会返回一个result类型的值，这个值是一个枚举类型。result的expect方法会在result属于Ok枚举类型时返回result本身，而result为Err时返回expect方法的参数并直接终止进程，除非继续进行错误处理。
-如果一个方法返回result类型，但没有继续调用expect方法，那么编译时会进行警告。
+read_line方法会返回一个result类型的值，这个值是一个枚举类型。result的expect方法会在result属于Ok枚举类型时返回result本身，而result为Err时打印expect方法的参数并直接终止进程，除非继续进行错误处理。
+如果一个方法返回result类型，但没有继续处理result，那么编译器会报错。
 
 ##### 3.1 生成随机数并比较
 ##### 3.1.1 引入一个crate
@@ -70,7 +70,7 @@ Rng是rand库中的一个trait。trait相当于一个interface。生成随机数
 ```rust
 let secret_num = rand::thread_rng().gen_range(1..101)
 ```
-`thread_rng`是rand库中的一个模块函数（注意不是关联函数，关联函数通常是一个类型impl上的类静态方法），用于生成一个线程本地的随机数生成器，他会从操作系统中获取一个随机数种子。这个生成器属于一个具体的Rng trait的实现。这个Rng存在一个gen_range方法，`1..101`是一个范围表达式，指>=1并<101的范围。
+`thread_rng`是rand库中的一个模块函数（注意不是关联函数，关联函数通常是一个结构体上的类静态方法），用于生成一个线程本地的随机数生成器，他会从操作系统中获取一个随机数种子。这个生成器属于一个具体的Rng trait的实现。这个Rng存在一个gen_range方法，`1..101`是一个范围表达式，指>=1并<101的范围。
 ###### 3.1.4 类型转换和比较
 ```rust
 use std::cmd::Ordering
