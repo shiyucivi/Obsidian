@@ -51,3 +51,19 @@ for i in mut_iter {
 }
 ```
 rust在的Range范围表达式也具有iter的trait，指向heap中的一些连续的数字。
+==注意，对一个数组、Vector等直接进行for循环，会消耗掉这个vec。所以一般对vec的引用或iter使用for循环==
+```rust
+let v = vec![1, 2, 3];
+for i in v {
+   println!("sub thread: {}", i);
+}
+//循环结束后v被消耗掉
+println!("sub thread: {}", v[0]); //❌，v已经被释放
+
+let v2 = vec![1, 2, 3];
+for i in v2.iter {
+   println!("sub thread: {}", i);
+}
+println!("sub thread: {}", v2[0]); //可以，v还存在
+```
+因为for循环本质上是`IntoIterator` trait的`into_iter`方法，这个方法的参数是self而不是&self。

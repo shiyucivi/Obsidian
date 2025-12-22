@@ -30,11 +30,11 @@ Rc的clone trait与普通的clone不同，clone方法会返回一个新的Rc指�
 use std::rc::{Rc, Weak};
 let strong = Rc::new(42);
 println!("Strong count: {}", Rc::strong_count(&strong)); // 1
-let weak: Weak<i32> = Rc::downgrade(&strong);
+let weak: Weak<i32> = Rc::downgrade(&strong); //弱引用计数+1
 println!("Strong count: {}", Rc::strong_count(&strong)); // 1（未变）
-println!("Weak count: {}", Rc::weak_count(&strong));     // 1
+println!("Weak count: {}", Rc::weak_count(&strong));     // 1 
 
-if let Some(strong_again) = weak.upgrade() {
+if let Some(strong_again) = weak.upgrade() { //升级为强引用
     println!("Value: {}", *strong_again); // 42
 } else {
     println!("Value has been dropped!");

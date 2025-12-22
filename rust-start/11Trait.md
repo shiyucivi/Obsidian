@@ -136,4 +136,32 @@ where T: Clone,
     self.value.clone()
   }
 }
+impl MyTrait<T> for Container<i32>
+where T: Clone,
+{
+  fn do_something(&self) -> T {
+    self.value
+  }
+}
 ```
+## 5 限制trait只能为某类型实现
+可以使用`trait MyTrait: Bound`这样的写法，规定这个泛型只能为满足约束条件的结构体进行实现。
+```rust
+// 定义一个前置trait
+trait CanFly {
+    fn fly(&self);
+}
+// 只有实现了CanFly的类型，才能实现Pilot
+trait Pilot: CanFly {
+    fn take_off(&self);
+    fn land(&self);
+}
+```
+与带有泛型参数的trait的区别：
+
+| 写法                        | 含义                                                                                       |
+| ------------------------- | ---------------------------------------------------------------------------------------- |
+| `trait MyTrait<T: Bound>` | 这是一个**泛型 trait**，每个 `T` 都会产生一个独立的 trait（如 `MyTrait<i32>` 和 `MyTrait<String>` 是不同的 trait） |
+| `trait MyTrait: Bound`\|  | 这表示**实现该 trait 的类型自身**必须满足 `Bound`                                                       |
+
+
