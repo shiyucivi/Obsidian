@@ -30,3 +30,4 @@ let v1_iter = v1.iter();
 let v1_map_iter = v1_iter.map(|x| x + 1); //v1_iter被消耗掉，不能再使用
 let v2: Vec<_> = v1_map_iter.collect(); //vec![2,3,4]
 ```
+注意map是惰性执行的，map后面必须执行collect、sum等方法才会执行，否则不会执行。如果想遍历迭代器并且直接执行，可以使用for_each
