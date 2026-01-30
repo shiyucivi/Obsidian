@@ -67,12 +67,23 @@ impl Human {
   fn run {/*具体实现*/}
 }
 let person = Human;
-person.run(&person); //调用自己实现的run方法
+person.run(); //调用自己实现的run方法
 Bird::run(&person); //调用Bird中的run方法
 ```
 ### 4.1 调用trait中的静态方法
 如果一个trait中存在一个没有self参数的静态方法，不能通过`trait::fn_name`的方式来直接调用trait中的静态方法。而是要通过这种方式：
 `<Type as Trait>::function(args)`
+### 4.2 涡轮鱼写法
+`::<T>` 这种语法通常被称为 **“涡轮鱼”（Turbofish）** 语法。用于手动指定方法的泛型参数为具体类型，用于编译器无法自动推断泛型类型的场景。
+```rust
+fn create_default<T>() -> T 
+where 
+    T: Default, 
+{
+    T::default()
+}
+let num: i32 = create_default::<i32>(); 
+```
 ## 5 Super trait
 如果想在一个trait中实现另一个trait（Super trait）中的方法。但是这要求类型必须同时实现两个trait。
 ```rust
