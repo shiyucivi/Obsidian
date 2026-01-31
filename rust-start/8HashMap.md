@@ -23,6 +23,7 @@ let red = colors.get("Red").copied().unwrap_or((255,255,255));
 //如果Option里的值是个引用类型，copied方法会对其解引用并copy一个全新的值出来，在返回一个Option。注意Option的值必须是引用类型而是Option<T>或者Option<&mut T>。
 //unwrap_or用于在解包一个Option，如果为None则将第一个参数作为默认值返回。
 ```
+如果想直接修改V，那么可以通过get_mut方法获取到`&mut V`
 ### 1.1 HashMap的遍历
 HashMap实现了iter trait。可以用for in循环来遍历
 ```rust
