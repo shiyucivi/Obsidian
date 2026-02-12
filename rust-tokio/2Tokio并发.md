@@ -55,7 +55,7 @@ yield_now方法返回一个空的future。异步任务会在遇到await尝试让
 ### 4 sleep
 `tokio::time::sleep(time).await`可以让当前异步任务进入休眠状态，并将线程交给其他异步任务。
 ### 5 `spawn_blocking`
-如果在tokio异步运行时的一个线程中执行一个需要占据大量时间来完成的同步操作，例如没有实现Future的文件IO、CPU密集计算等无法await的任务，那么该线程会完全阻塞。这被成为线程饥饿。`spawn_blocking`就是为了解决这一问题而生的。
+如果在tokio异步运行时的一个任务中执行一个需要占据大量时间来完成的同步操作，例如没有实现Future的文件IO、CPU密集计算等无法await的任务，那么该任务的线程会长时间无法释放。`spawn_blocking`就是为了解决这一问题而生的。
 被放入`spawn_blocking`的任务会被丢入一个独立的阻塞线程池中运行，这个线程是一个系统线程。并返回一个JoinHandler，可以通过.await实现异步获取结果。
 ```rust
 fn delay(taskid: u32, time: u32) {
@@ -80,10 +80,14 @@ fn main() {
 tokio的spawn和spawn_blocking都必须在异步运行时中执行。
 ### 6 select
 `tokio::select!` 宏是 Tokio中用于并发等待多个异步操作的核心工具，它的核心作用是：
-同时监听多个异步分支（Future），一旦其中任意一个完成，就立即执行对应的处理逻辑，并取消其余未完成的分支。
+同时匹配多个异步分支（Future），一旦其中任意一个完成，就立即执行对应的处理逻辑，并取消其余未完成的分支。
+`select!`模式匹配的语法：
+`<结果> = <Future 分支表达式> => {结果处理},`
 这是一个tcp客户端并发同时处理接收到消息和发送消息的示例：
 ```rust
-let mut stream = TcpStream::connect("127.0.0.1:8080").await?; let (mut reader, mut writer) = stream.split(); let mut buf = [0u8; 1024];
+let mut stream = TcpStream::connect("127.0.0.1:8080").await?; 
+let (mut reader, mut writer) = stream.split(); 
+let mut buf = [0u8; 1024];
 loop { 
 	tokio::select! { 
 		//分支1 收到消息
