@@ -108,6 +108,7 @@ loop {
 ```
 所有分支的 `Future` 同时被随机轮询检查是否完成。哪个先完成执行哪个。
 作为分支条件的Future表达式后面不需要跟await。宏会自动解包Future。
+实际当中经常使用loop + select的组合用于判断是否执行某个异步操作（feature）
 #### 6.1 `select_biased`宏
 与select宏类似。但`select——biased`会每次轮询时**从上到下依次检查**分支是否就绪而不是随机检查。用于处理多个权重不同的异步并发任务。
 ### 7 Race
