@@ -13,6 +13,7 @@ async fn main() {
 }
 //先打印出5，后打印出hello world。这段代码实际上是串行地执行异步任务。因为在一个异步任务后立即await会挂起当前异步线程直到一步完成。如果没用await那就先打印出hello
 ```
+spawn创建的任务不会立即执行，而是会进入执行队列等待调度执行。
 如果一个spawn创建的异步任务没用跟await，那么它就会在另一个线程中独立运行，不会挂起当前线程。这一用法适用于一些不需要异步任务返回结果的情况。
 注意：如果spawn创建的异步线程的handler后面没用跟.await，那么主线程结束后。这个异步线程也会结束，不管有没有完成。
 ### 2 Join
@@ -54,7 +55,7 @@ yield_now方法返回一个空的future。异步任务会在遇到await尝试让
 ### 4 sleep
 `tokio::time::sleep(time).await`可以让当前异步任务进入休眠状态，并将线程交给其他异步任务。
 ### 5 `spawn_blocking`
-如果在tokio异步运行时的一个线程中执行一个需要占据大量时间来完成的同步操作，例如没有实现Future的文件IO、CPU密集计算等无法await的任务，那么该线程会完全阻塞。这被成为线程饥饿。`spawn_blocking`就是为了解决这一问题而生的。
+如果在tokio异步运行时的一个任务中执行一个需要占据大量时间来完成的同步操作，例如没有实现Future的文件IO、CPU密集计算等无法await的任务，那么该任务的线程会长时间无法释放。`spawn_blocking`就是为了解决这一问题而生的。
 被放入`spawn_blocking`的任务会被丢入一个独立的阻塞线程池中运行，这个线程是一个系统线程。并返回一个JoinHandler，可以通过.await实现异步获取结果。
 ```rust
 fn delay(taskid: u32, time: u32) {
@@ -79,10 +80,14 @@ fn main() {
 tokio的spawn和spawn_blocking都必须在异步运行时中执行。
 ### 6 select
 `tokio::select!` 宏是 Tokio中用于并发等待多个异步操作的核心工具，它的核心作用是：
-同时监听多个异步分支（Future），一旦其中任意一个完成，就立即执行对应的处理逻辑，并取消其余未完成的分支。
+同时匹配多个异步分支（Future），一旦其中任意一个完成，就立即执行对应的处理逻辑，并取消其余未完成的分支。
+`select!`模式匹配的语法：
+`<结果> = <Future 分支表达式> => {结果处理},`
 这是一个tcp客户端并发同时处理接收到消息和发送消息的示例：
 ```rust
-let mut stream = TcpStream::connect("127.0.0.1:8080").await?; let (mut reader, mut writer) = stream.split(); let mut buf = [0u8; 1024];
+let mut stream = TcpStream::connect("127.0.0.1:8080").await?; 
+let (mut reader, mut writer) = stream.split(); 
+let mut buf = [0u8; 1024];
 loop { 
 	tokio::select! { 
 		//分支1 收到消息
@@ -103,6 +108,7 @@ loop {
 ```
 所有分支的 `Future` 同时被随机轮询检查是否完成。哪个先完成执行哪个。
 作为分支条件的Future表达式后面不需要跟await。宏会自动解包Future。
+实际当中经常使用loop + select的组合用于判断是否执行某个异步操作（feature）
 #### 6.1 `select_biased`宏
 与select宏类似。但`select——biased`会每次轮询时**从上到下依次检查**分支是否就绪而不是随机检查。用于处理多个权重不同的异步并发任务。
 ### 7 Race
