@@ -47,3 +47,15 @@ for chara in chars1 {
   println!("{chara}");
 }
 ```
+### 2.5 字符串分割
+可以使用split方法将字符串按照某个字符进行分割，返回一个迭代器
+```rust
+let s = "hello,world"; 
+let parts: Vec<&str> = s.split(',').collect();
+```
+`split_whitespace()` 是专门用于按任意空白字符（空格、制表符、换行等）分割的便捷方法。
+```rust
+let s = "a b\tc\n d"; 
+let parts: Vec<&str> = s.split_whitespace().collect(); 
+assert_eq!(parts, vec!["a", "b", "c", "d"]);
+```
