@@ -15,6 +15,7 @@ let mut buffer: [u8; 10] = [0; 10];
 let n = f.read(&mut buffer[..]).await.unwrap();
 println!("bytes: {}", &buffer[..n]);
 ```
+read方法类似于迭代器的next方法，可以重复调用以读取后面的内容：
 如果read方法返回数字小于buf的长度，说明读取器内的数据已全部读取。
 如果read方法返回0，说明读取已达到数据末尾（`EOF`），数据应结束读取。
 读取器内部维护了一个读取位置（`cursor`），每次成功 `read` 后，这个位置会自动向前推进，直到到达`EOF`。通常使用loop循环读取一个读取器。
@@ -51,7 +52,7 @@ file.write_all(b"some bytes").await?.unwrap();
 将客户端发送给服务器的内容原封不动地返回去，有两种方式：
 #### 2.1 使用`io::copy`
 copy方法会将读取器`reader`中的内容拷贝到写入器`writer`当中。
-TcpStream类型是一个实现了`Reader + Writter`的读写器，这种类型可以使用`io::split`分离为读取器和写入器。
+`TcpStream`类型是一个实现了`Reader + Writter`的读写器，这种类型可以使用`io::split`分离为读取器和写入器。
 ```rust
 use tokio::io;
 use tokio::net::TcpListener;
