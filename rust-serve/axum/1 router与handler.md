@@ -71,3 +71,12 @@ let root = Router::new().nest("/api", api_router);
 - 必须是async函数
 - 参数必须实现 Axum 的 **extractors**（如 `Path`, `Query`, `Json`, `State` 等）
 - 函数返回值必须实现`IntoResponse`。常用的`String`、`str`、`Json`、`Html`、`(StatusCode, T: IntoResponse)`等类型均已实现了这个trait。
+### 4 无匹配路径
+可以为一个Router指定一个兜底的handler，例如404页面：
+```rust
+let app = Router::new().route("/", get(handler))
+	.fallback(handler_404);
+async fn handler_404() -> impl IntoResponse {
+    (StatusCode::NOT_FOUND, "nothing to see here")
+}
+```

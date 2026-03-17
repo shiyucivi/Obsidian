@@ -25,7 +25,8 @@ app.layer(
 注意，`layer`方法会为作用于`Router`中的所有路由，即使只为被嵌套的子路由设置了`layer`。
 为部分路由设置中间件，需要`route_layer`方法搭配`nest`方法：
 ```rust
-//用户认证中间件函数
+// 用户认证中间件函数
+// 泛型B代表请求体的类型
 async fn require_auth<B>( req: Request<B>, next: Next<B> ) -> Result<Response, Response> {
     if req.headers().get("Authorization").is_some() {
         Ok(next.run(req).await)
@@ -118,5 +119,4 @@ let app = Router::new()
     .route("/foo", post(handler))
     .route_layer(from_extractor::<RequireAuth>());
 ```
-### 2 `tower::Service`自定义中间件
 
