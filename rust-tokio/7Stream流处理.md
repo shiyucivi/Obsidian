@@ -50,8 +50,11 @@ while let Some(msg) = stream.next().await {
 使用`Stream`包装`Receiver`的好处在于可以将多个消息接收流合并，即使每个`Stream`所处理的数据类型不同。
 #### 1.2 `StreamExt`
 `tokio-stream`的`StreamExt` trait为处理`Stream`提供了多种迭代器方法的异步版本：`next`、`map`、`filter`、`collect`、`merge`等。
-### 2 `tokio-util`
-`tokio_util::io`提供了`ReaderStream`，用于将`tokio::fs`中提供的读取器转为`Stream`，方便对文件进行流式处理。
+### 2 `future_util`
+`future_util`同样提供了`Stream`和`StreamExt`两大trait。只不过trait中的方法有所区别。可以按需使用。
+### 3 `tokio-util` 异步读取流
+#### 3.1 `ReaderStream`
+`tokio_util::io`提供了`ReaderStream`，用于将`tokio::fs`中提供的读取器`AsyncReader`转为`Stream`，方便对文件进行流式处理。
 ```rust
 // 通过stream将一个hello.txt的内容复制到foo.txt中
 use tokio::{
@@ -68,3 +71,7 @@ while let Some(chunk) = stream.next().await {
 	writer.write_all(&chunk.unwrap()).await.unwrap();
 }
 ```
+#### 3.2 `StreamReader`
+`tokio_util::io`还提供了`StreamReader`，这是与`ReaderStream`的反方向转换的工具，将`Stream<Item=Result<Bytes, E>>`转换为`AsyncReader`。可以用于一些需要`AsyncReader`相关api进行处理的场景。
+
+
