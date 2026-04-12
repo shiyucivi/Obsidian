@@ -80,7 +80,7 @@ fn main() {
 tokio的spawn和spawn_blocking都必须在异步运行时中执行。
 ### 6 select
 `tokio::select!` 宏是 Tokio中用于并发等待多个异步操作的核心工具，它的核心作用是：
-同时匹配多个异步分支（Future），一旦其中任意一个完成，就立即执行对应的处理逻辑，并取消其余未完成的分支。
+同时等待多个异步分支，一旦其中任意一个完成，就立即执行对应的处理逻辑。
 `select!`模式匹配的语法：
 `<结果> = <Future 分支表达式> => {结果处理},`
 这是一个tcp客户端并发同时处理接收到消息和发送消息的示例：
@@ -107,8 +107,18 @@ loop {
 }
 ```
 所有分支的 `Future` 同时被随机轮询检查是否完成。哪个先完成执行哪个。
-作为分支条件的Future表达式后面不需要跟await。宏会自动解包Future。
-实际当中经常使用loop + select的组合用于判断是否执行某个异步操作（feature）
+作为分支条件的`Future`表达式后面不需要跟await。宏会自动解包Future。
+
+实际当中经常使用`spawn`+`select!`的组合用于并发地等待多个并行任务句柄的完成：
+```rust
+let handle1 = tokio::spawn(async { /* 任务1 */ }); 
+let handle2 = tokio::spawn(async { /* 任务2 */ }); 
+tokio::select! { 
+	_ = handle1 => println!("任务1先完成"), 
+	_ = handle2 => println!("任务2先完成"),
+}
+```
+相比于单纯地使用`loop`+`spawn`来执行重复执行多个异步任务（例如处理用户消息），`select!`+`spawn`的优势在于`select!`能自动决定让执行快的任务优先进行，当多个相同目标的任务执行时及时结束不需要执行的任务（竞态执行）。
 #### 6.1 `select_biased`宏
 与select宏类似。但`select——biased`会每次轮询时**从上到下依次检查**分支是否就绪而不是随机检查。用于处理多个权重不同的异步并发任务。
 ### 7 Race

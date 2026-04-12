@@ -30,53 +30,42 @@
 1. **templates** - 模板引擎使用
 2. **templates-minijinja** - Minijinja 模板
 3. **static-file-server** - 静态文件资源服务
-
-### 第七阶段：实时通信
-
-24. **websockets** ⭐ - WebSocket 基础
-25. **testing-websockets** - WebSocket 测试
-26. **sse** - Server-Sent Events
-27. **chat** - 聊天室应用（WebSocket 实战）
-
-### 第八阶段：数据库集成
-
-28. **sqlx-postgres** - SQLx + PostgreSQL
-29. **tokio-postgres** - PostgreSQL 异步驱动
-30. **tokio-redis** - Redis 集成
-31. **diesel-postgres** - Diesel ORM + PostgreSQL
-32. **diesel-async-postgres** - Diesel 异步版本
-33. **mongodb** - MongoDB 集成
-
-### 第九阶段：认证与安全
-
-34. **jwt** ⭐ - JWT 认证
-35. **oauth** - OAuth 认证
-36. **validator** - 数据验证
-37. **tls-rustls** - TLS/HTTPS（使用 Rustls）
-38. **tls-graceful-shutdown** - TLS + 优雅关闭
-
-### 第十阶段：高级特性
-
-39. **graceful-shutdown** ⭐ - 优雅关闭
-40. **testing** ⭐ - 测试技巧
-41. **reqwest-response** - 使用 reqwest 客户端
-42. **serve-with-hyper** - 与 Hyper 集成
-43. **reverse-proxy** - 反向代理
-44. **http-proxy** - HTTP 代理
+### 7 网络通信
+1. **reqwest-response** - 使用 reqwest 客户端
+2. **websockets** ⭐ - WebSocket 基础
+3. **testing-websockets** - WebSocket 测试
+4. **sse** - Server-Sent Events
+5. **chat** - 聊天室应用（WebSocket 实战）
+### 8：高级技巧
+1. **graceful-shutdown** ⭐ - 优雅关闭
+2. **testing** ⭐ - 测试技巧
+3. **serve-with-hyper** - 与 Hyper 集成
+4. **reverse-proxy** - 反向代理
+5. **http-proxy** - HTTP 代理
+6. **auto-reload** - 自动重载（开发时）
+### 9 认证与安全
+1. **jwt** ⭐ - JWT 认证
+2. **oauth** - OAuth 认证
+3. **validator** - 数据验证
+4. **tls-rustls** - TLS/HTTPS（使用 Rustls）
+5. **tls-graceful-shutdown** - TLS + 优雅关闭
+### 10 数据库集成
+1. **sqlx-postgres** - SQLx + PostgreSQL
+2. **tokio-postgres** - PostgreSQL 异步驱动
+3. **tokio-redis** - Redis 集成
+4. **diesel-postgres** - Diesel ORM + PostgreSQL
+5. **diesel-async-postgres** - Diesel 异步版本
+6. **mongodb** - MongoDB 集成
 
 ### 第十一阶段：其他特性
-
 46. **prometheus-metrics** - Prometheus 监控指标
-47. **auto-reload** - 自动重载（开发时）
-48. **unix-domain-socket** - Unix 域套接字
-49. **stream-to-file** - 流式写入文件
-50. **async-graphql** - GraphQL 集成
-51. **todos** - TODO 应用（完整示例）
-52. **versioning** - API 版本控制
-53. **simple-router-wasm** - WASM 支持
+47. **unix-domain-socket** - Unix 域套接字
+48. **async-graphql** - GraphQL 集成
+49. **todos** - TODO 应用（完整示例）
+50. **versioning** - API 版本控制
+51. **simple-router-wasm** - WASM 支持
 
 ### 第十二阶段：底层与进阶
-
 54. **low-level-rustls** - 底层 TLS（Rustls）
 55. **low-level-native-tls** - 底层 TLS（Native TLS）
 56. **low-level-openssl** - 底层 TLS（OpenSSL）
