@@ -16,14 +16,14 @@ colors.insert(String::from("Red"), (255,0,0));
 let red_color = colors.get("Red");
 colors.insert(String::from("Blue"), String::from("#0000FF")); //报错，值已经确定为(i32, i32, i32)类型
 ```
-==insert方法的第一个参数没有类型限制（泛型K）。==
-==get方法的参数必须是键类型的引用类型（&K）==。返回一个Option。可以衔接copied和unwrap_or来获取到Option里的值：
+- insert方法用于插入键值对，如果插入的是已存在的键返回`Option::Some(&V)`，如果插入的是不存在的则返回`Option::None`。
+- get方法用于根据键获取值，参数必须是键类型的引用类型（`&K`）。返回一个`Option`。可以衔接copied和unwrap_or来获取到Option里的值：
 ```rust
 let red = colors.get("Red").copied().unwrap_or((255,255,255));
 //如果Option里的值是个引用类型，copied方法会对其解引用并copy一个全新的值出来，在返回一个Option。注意Option的值必须是引用类型而是Option<T>或者Option<&mut T>。
 //unwrap_or用于在解包一个Option，如果为None则将第一个参数作为默认值返回。
 ```
-如果想直接修改V，那么可以通过get_mut方法获取到`&mut V`
+如果想直接修改V，那么可以通过get_mut方法获取到`&mut V`。
 ### 1.1 HashMap的遍历
 HashMap实现了iter trait。可以用for in循环来遍历
 ```rust
