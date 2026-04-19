@@ -25,7 +25,7 @@ let app = axum::Router::new()
 ```
 ### 2 SQL查询语句
 #### 2.1 宏
-宏会在编译时连接数据库，解析SQL语句、验证语法、表/列是否存在。并推断返回的字段类型。只能使用字面量SQL语句不能动态拼接。
+宏会在编译时连接数据库，解析SQL语句、验证语法、表/列是否存在。并推断返回的字段类型。只能使用字面量SQL语句不能动态拼接（例如`format!`等是不被允许使用的，会引发SQL注入问题）。
 ##### 2.1.1 `query!`
 `query!`查询宏会返回一个匿名结构体，其中包含了`SELECT`语句中的字段。
 ```rust
@@ -73,7 +73,7 @@ let count: u32 = slqx::query_scalar!("SELECT count(*) from cities")
 	.await?;
 ```
 #### 2.2 查询函数
-查询方法都是运行时动态查询的，适用于动态SQL或无法在编译时确定结构的场景。
+查询方法都是运行时动态查询的，适用于动态SQL或无法在编译时确定结构的场景。使用`bind`方法传入占位符填充值。（多个占位符多次使用`bind`）。
 ##### 2.2.1 `query()`
 类似于`query!`
 ```rust
@@ -171,9 +171,108 @@ async fn city_list_pagination(
 	Ok(Json(cities))
 }
 ```
-### 5 `QueryBuilder`动态查询
+### 5 批量操作
+PostgreSQL 支持将整个`Vec`作为参数传入，配合 `= ANY($1)` 可以安全、高效地处理成千上万条记录。
+```rust
+use sqlx::PgPool;
+async fn batch_delete(pool: PgPool, ids: Vec<String>) {
+	sqlx::query("DELETE FROM users WHERE id = ANY($1))
+		.bind(ids)
+		.execute(pool)
+		.await.unwrap();
+}
+```
+### 6 `QueryBuilder`动态查询
+如果需要在查询语句中动态拼接（例如子句、列名等），需要使用`sqlx::QueryBuilder`构建查询对象。
+例如一个查询用户列表的接口中，存在动态数量的筛选条件（用户姓名、年龄范围、邮箱）：
+```rust
+use sqlx::{PgPool, Row};
+use sqlx::postgres::PgRow;
 
+struct UserFilter {
+	name: Option<String>,
+	email: Option<String>,
+	min_age: Option<u32>,
+}
+async fn user_list(pool: PgPool, filter: &UserFilter) ->
+sqlx::Result<PgRow>
+{
+	let mut query_builder: sqlx::QueryBuilder<sqlx::Postgres> = 
+	    sqlx::QueryBuilder::new("SELECT id, name, email, age FROM users");
+	// 用于WHERE子句中的AND分隔符
+	let mut separated = query_builder.separated(" AND ");
+	
+	if filter.name.is_some() && filter.email.is_some() && filter.min_age.is_some() 
+	{
+		query_builder.push(" WHERE ");
+		separated = query_builder.separated(" AND ");
+	}
+	if Some(name) = filter.name {
+		separated.push(" name = ");
+		separated.bind(name);
+	}
+	if Some(email) = filter.email {
+		separated.push(" email = ");
+		separated.bind(email);
+	}
+	if Some(min_age) = filter.min_age {
+		separated.push(" age >= ");
+		separated.bind(min_age);
+	}
+	let query = query_builder.build();
+	let rows = pool.fetch_all(pool).await?;
+	Ok(rows)
+}
 
-### 5 事务
+let filter = UserFilter {
+    name: Some("Alice".to_string()),
+    email: None,
+    min_age: Some(18),
+};
+let users = find_users(&pool, &filter).await?;
+for row in users {
+	println!(
+		"id: {}, name: {}, email: {}, age: {}",
+		row.get::<i32, _>("id"),
+		row.get::<String, _>("name"),
+		row.get::<String, _>("email"),
+		row.get::<i32, _>("age")
+	);
+}
+```
+### 7 事务
+使用`pool.begin`即可开启事务。这个方法返回一个事务对象`tx`，后续所有事务的操作都要在这个对象上进行。推荐使用`?`让作用域在事务出错时结束并`drop tx`，此时会自动`ROLLBACK`。
+```rust
+use sqlx::{Acquire, PgPool}; // 提供 .begin() 方法
 
-### 6 视图
+async fn example(pool: &PgPool) -> Result<(), sqlx::Error> {
+	// 开启事务
+	let tx = pool.begin();
+	// 事务操作1
+	sqlx::query("INSERT INTO users (name) VALUES $1")
+		.bind("Alice")
+		.execute(tx).await?;
+	// 创建保存点
+	sqlx::query("SAVEPOINT sp1").execute(&mut *tx).await?;
+	// 事务操作2
+	let result = 
+		sqlx::query("UPDATE accounts SET balance = balance - 100 WHERE user_id = $1")
+	    .bind(1)
+	    .execute(&mut *tx).await;
+	if let Err(e) = result {
+		// 事务2出错回到存档点
+		sqlx::query("ROLLBACK TO SAVEPOINT sp1")
+			.execute(tx).await?;
+	} else {
+		// 成功则释放存档点
+		sqlx::query("RELEASE SAVEPOINT sp1")
+			.execute(tx).await?;
+	}
+	// 事务完成并提交
+	tx.commit();
+	Ok(())
+}
+```
+如果想手动让事务`ROLLBACK`，调用`tx.rollback().await`即可。
+### 8 错误处理
+`sqlx`提供了统一的错误类型`sqlx::Error`枚举。包括了大多数数据库错误类型如连接失败、SQL语法错误、行列不存在、数据类型匹配错误等。使用时可以按需转化为自定义错误类型（`impl From<Sqlx::Error> for MyError`）或实现`IntoResponse`。
