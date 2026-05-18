@@ -23,6 +23,7 @@ let app = axum::Router::new()
 	.router("/", get(handler))
 	.with_state(pool);
 ```
+创建的数据库连接池是`Clone + Send + Sync`的，即可共享的、线程安全的、可并发的连接池，不需要通过`Arc<Mutex>`加锁的方式来访问。
 ### 2 SQL查询语句
 #### 2.1 宏
 宏会在编译时连接数据库，解析SQL语句、验证语法、表/列是否存在。并推断返回的字段类型。只能使用字面量SQL语句不能动态拼接（例如`format!`等是不被允许使用的，会引发SQL注入问题）。
@@ -75,7 +76,7 @@ let count: u32 = slqx::query_scalar!("SELECT count(*) from cities")
 #### 2.2 查询函数
 查询方法都是运行时动态查询的，适用于动态SQL或无法在编译时确定结构的场景。使用`bind`方法传入占位符填充值。（多个占位符多次使用`bind`）。
 ##### 2.2.1 `query()`
-类似于`query!`
+类似于`query!`。返回一个`PgRow`类型，可以通过`get`获取到
 ```rust
 let row = sqlx::query("SELECT name FROM cities WHERE id = $1")
     .bind(1i32)
@@ -172,18 +173,38 @@ async fn city_list_pagination(
 }
 ```
 ### 5 批量操作
+#### 5.1 批量删除
 PostgreSQL 支持将整个`Vec`作为参数传入，配合 `= ANY($1)` 可以安全、高效地处理成千上万条记录。
 ```rust
 use sqlx::PgPool;
 async fn batch_delete(pool: PgPool, ids: Vec<String>) {
 	sqlx::query("DELETE FROM users WHERE id = ANY($1))
 		.bind(ids)
-		.execute(pool)
+		.execute(&pool)
 		.await.unwrap();
 }
 ```
-### 6 `QueryBuilder`动态查询
-如果需要在查询语句中动态拼接（例如子句、列名等），需要使用`sqlx::QueryBuilder`构建查询对象。
+#### 5.2 批量增改
+通常使用`for`循环遍历+事务+`query`或`query!`进行批量增改。（PgSQL存在缓存机制会优化此操作的性能）。
+```rust
+use sqlx::PgPool;
+async fn batch_insert(pool: &PgPool, users: Vec<(&str, i32)>) 
+-> Result<(), sqlx::Error> {
+	let mut tx = pool.begin().await?;
+	for let (user_name, age) in users {
+		sqlx.query!(
+			"INSERT INTO users (name, age) VALUES ($1, $2)", 
+			user_name, 
+			age
+		).execute(&mut tx)
+		.await?
+	}
+	tx.commit().await?;
+	Ok(())
+}
+```
+### 6 `QueryBuilder`动态查询器
+如果需要在查询语句中动态拼接（例如子句、列名等），需要使用`sqlx::QueryBuilder`构建动态查询器。
 例如一个查询用户列表的接口中，存在动态数量的筛选条件（用户姓名、年龄范围、邮箱）：
 ```rust
 use sqlx::{PgPool, Row};
@@ -194,33 +215,34 @@ struct UserFilter {
 	email: Option<String>,
 	min_age: Option<u32>,
 }
+struct UserFilter {
+	id: i32
+	name: String,
+	email: String,
+	age: u32,
+}
 async fn user_list(pool: PgPool, filter: &UserFilter) ->
 sqlx::Result<PgRow>
 {
 	let mut query_builder: sqlx::QueryBuilder<sqlx::Postgres> = 
 	    sqlx::QueryBuilder::new("SELECT id, name, email, age FROM users");
 	// 用于WHERE子句中的AND分隔符
+	query_builder.push(" WHERE true");
 	let mut separated = query_builder.separated(" AND ");
-	
-	if filter.name.is_some() && filter.email.is_some() && filter.min_age.is_some() 
-	{
-		query_builder.push(" WHERE ");
-		separated = query_builder.separated(" AND ");
-	}
 	if Some(name) = filter.name {
-		separated.push(" name = ");
-		separated.bind(name);
+		separated.push("name =");
+		separated.push_bind(name);
 	}
 	if Some(email) = filter.email {
-		separated.push(" email = ");
-		separated.bind(email);
+		separated.push("email =");
+		separated.push_bind(email);
 	}
 	if Some(min_age) = filter.min_age {
-		separated.push(" age >= ");
-		separated.bind(min_age);
+		separated.push("age >=");
+		separated.push_bind(min_age);
 	}
-	let query = query_builder.build();
-	let rows = pool.fetch_all(pool).await?;
+	let query = query_builder.build_query_as::<User>();
+	let rows = query.fetch_all(&pool).await?;
 	Ok(rows)
 }
 
@@ -229,14 +251,14 @@ let filter = UserFilter {
     email: None,
     min_age: Some(18),
 };
-let users = find_users(&pool, &filter).await?;
+let users = user_list(&pool, &filter).await?;
 for row in users {
 	println!(
 		"id: {}, name: {}, email: {}, age: {}",
-		row.get::<i32, _>("id"),
-		row.get::<String, _>("name"),
-		row.get::<String, _>("email"),
-		row.get::<i32, _>("age")
+		row.id,
+		row.name,
+		row.email,
+		row.age
 	);
 }
 ```
@@ -247,7 +269,7 @@ use sqlx::{Acquire, PgPool}; // 提供 .begin() 方法
 
 async fn example(pool: &PgPool) -> Result<(), sqlx::Error> {
 	// 开启事务
-	let tx = pool.begin();
+	let tx = pool.begin().await?;
 	// 事务操作1
 	sqlx::query("INSERT INTO users (name) VALUES $1")
 		.bind("Alice")
@@ -269,7 +291,7 @@ async fn example(pool: &PgPool) -> Result<(), sqlx::Error> {
 			.execute(tx).await?;
 	}
 	// 事务完成并提交
-	tx.commit();
+	tx.commit().await?;
 	Ok(())
 }
 ```

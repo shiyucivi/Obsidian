@@ -17,34 +17,30 @@ fs::read_dir(path);  //读取目录，返回一个ReadDir迭代器
 fs::remove_dir(path); //删除目录
 fs::remove_dir_all(path); //递归删除目录
 ```
-### 2 io
+### 2 文件io
 io库中为File、TcpStream、内存缓冲区等数据类型封装了读取、写入、移动读写位置等的trait。
 #### 2.1 核心trait
 io提供了几个核心的trait用于对文件进行各种操作
 1. Read。从源读取字节。
-Read是对所有可读对象（文件、网络流、内存缓冲区）进行操作的抽象。实际当中应该避免直接使用Read的方法。而是使用性能更高的BufRead。
+Read是对所有可读对象（文件、网络流、内存缓冲区）进行操作的抽象。
 2. Write。向目标中写入字节。
 3. Seek。在支持随机访问的源中移动读写位置。
 4. BufRead。带缓冲区的读取，支持按行读取。
-#### 2.2 BufRead
-`BufReader` 是标准库中用于**带缓冲读取**的核心工具，它包装任意实现了 `Read` trait 的类型（如 `File`、`TcpStream`、`Cursor<Vec<u8>>` 等），通过内部缓冲区减少系统调用次数，显著提升 I/O 性能。
+
+#### 2.2 文件读取
+`BufReader` 是标准库中用于**带缓冲读取**的核心类型，它包装任意实现了 `Read`和`BufRead` trait 的类型（如 `File`、`TcpStream` 等），通过内部缓冲区减少系统调用次数，显著提升 I/O 性能。
+`BufReader`从`Read`和`BufReader`中继承了一些常用的读取方法
+##### 2.2.1 按行读取
+可使用`read_line()`方法逐行读取（读取返回每行字节数），或使用`lines()`返回迭代器进行迭代处理
 ```rust
-use std::io::{BufReader, Read};
+use std::io::{BufReader, Read, BufRead};
 
 let file = std::fs::File::open("data.txt")?;
-//创建一个缓冲区，默认大小为8kb
-let mut buf_reader = BufReader::new(file);
-
-//
-let mut buf = [0; 1024];
-buf_reader.read(&mut buf)?; // 将前1024个字节读取到buf中
-```
-BufReader最重要的功能是实现了按行读取和分块读取的操作，常用于解析各种格式化文件与http协议：
-```rust
+let mut reader = BufReader::new(file);
 let mut line = String::new();
-// 将文件按行读取到line中
-while buf_reader.read_line(&mut line)? > 0 {
-    println!("Line: {}", line.trim_end());
+// 将逐行读取到line中
+while reader.read_line(&mut line)? > 0 {
+    process(&mut line);
     line.clear(); // 重用 String 避免重复分配
 }
 // lines方法会返回一个Lines迭代器，每次迭代返回一行的Result
@@ -53,7 +49,43 @@ for line in buf_reader.lines() {
     process(line);
 }
 ```
-#### 2.3 错误处理
+##### 2.2.2 按块读取
+如果不需要按行读取，可以手动指定一个缓冲区进行读取：
+```rust
+use std::io::{BufReader, Read, BufRead};
+
+let file = std::fs::File::open("data.txt")?;
+let mut reader = BufReader::new(file);
+
+//创建一个1024字节大小的缓冲区
+let mut buf = [0; 1024];
+buf_reader.read(&mut buf)?; // 将前1024个字节读取到buf中
+```
+#### 2.3 文件写入
+`BufWriter`是一个带缓冲的写入器，包装了实现`Write` trait的类型（`File`，`TcpStream`等）。
+`BufWriter`在写入时需要将写入类型转化为字节类型。
+##### 2.3.1 `write()`和`write_all()`追加写入
+`write()`和`write_all()`都是写入数据的方法，区别是`write()`受缓冲区或磁盘性能等影响不保证全部写入内容，返回实际写入的字节数。而`write_all()`会尝试全部写入。
+```rust
+use std::io::{BufReader, BufWriter, Read, BufRead, Write};
+use std::file::File;
+let mut input_file = File::open("output.txt");
+let mut output_file = File::create("output.txt");
+let mut reader = BufReader::new(input_file);
+let mut line = String::new();
+let mut writer = BufWriter::new(output_file);
+while reader.read_line(&mut line)?>0 {
+	writer.write_all(&mut line.as_bytes())?;
+	writer.write_all(b"/n")?;
+	line.clear();
+}
+```
+##### 2.3.2 格式化写入
+`write!`和`writeln!`是用来格式化写入内容的宏，用法类似于`format!`宏，区别在于后者会在末尾自动追加换行符。
+```rust
+writeln!(writer, "Time: {}, Status: {}", now(), "OK")?;
+```
+#### 2.4 错误处理
 所有的IO操作均返回`Result<T, std::io::Error>`类型。推荐使用?进行错误传播或thiserror自定义错误类型。
 ### 3 路径：Path和PathBuf
 `std::path::Path`是一种不可变的路径引用，类似于`&str`，通常以引用形式出现。而`PathBuf`是可变的拥有所有权的路径。`PathBuf`进行解引用操作可以得到`&Path`。因此两者很多方法可以共享使用。
@@ -85,7 +117,6 @@ let mut file_path = PathBuf::from("/var/log/my_app");
 file_path.push("2023"); 
 file_path.push("error.log");
 ```
-
 ### 4 tokio中的文件异步操作
 Tokio的设计哲学是“统一异步接口”。无论是文件还是 TCP 流，都使用相同的 `AsyncRead/Write` 接口。
 核心trait：

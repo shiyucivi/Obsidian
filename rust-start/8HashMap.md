@@ -27,7 +27,7 @@ let red = colors.get("Red").copied().unwrap_or((255,255,255));
 ### 1.1 HashMap的遍历
 HashMap实现了iter trait。可以用for in循环来遍历
 ```rust
-for let (key, value) in &colors {
+for (key, value) in &colors {
 	println!("{}:{}", key, value);
 	//key为&String类型，value为&(i32, i32, i32)类型
 }

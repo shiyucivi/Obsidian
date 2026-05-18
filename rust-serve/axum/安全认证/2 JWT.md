@@ -15,7 +15,7 @@ jwt加密需要使用`jsonwebtoken` crate。这个crate提供了`encode`方法�
 1. 首先生成一对非对称密钥分别用于加密和解密：
 ```rust
 use jsonwebtoken::{
-	decode, encode, DecodingKey, EncodingKey, Header, Validation
+	decode, encode, DecodingKey, EncodingKey, Header, Validation,
 };
 struct Keys {
     encoding: EncodingKey,

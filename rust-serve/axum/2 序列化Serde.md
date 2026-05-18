@@ -31,6 +31,16 @@ let p: Person = serde_json::from_str(json).unwrap();
 ### 2 常用属性宏
 `serde`提供了多种属性宏来自定义序列化和反序列化中的行为
 #### 2.1 字段重命名
+可以使用`#[serder(rename_all = "camelCase")]`来指定自动于小驼峰写法进行互相转换
+```rust
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct User {
+    user_id: u32,
+    name: String,
+}
+```
+也可以针对字段单独重命名
 ```rust
 #[derive(Serialize, Deserialize)]
 struct User {
@@ -206,6 +216,7 @@ fn main() {
     let json_str = serde_json::to_string_pretty(&people).unwrap();
     //反序列化
 	let deserialized: Vec<Person> = serde_json::from_str(&json_str).unwrap();
+}
 ```
 ### 6 嵌套结构
 对于嵌套类型的结构体`struct<T>`，只要对T派生了`Serialize` 和 `Deserialize` trait 即可，serde会自动处理嵌套字段。
@@ -268,3 +279,28 @@ struct Payload {
 }
 ```
  `DisplayFromStr` 表示：**接受任意类型，先转成字符串，再用 `FromStr` trait 解析为目标类型**。
+### 8 枚举值的序列化与反序列化
+对于不持有数据的枚举，序列化和反序列化时会当作普通字符串进行处理：
+```rust
+use serde::{Serialize, Deserialize};
+
+#[derive(Serialize, Deserialize, Debug)]
+enum Color {
+    Red,
+    Green,
+    Blue,
+}
+#[derive(Serialize, Deserialize, Debug)]
+struct Car {
+	model: String,
+	color: Color
+}
+let yu7 = Car {
+	model: "yu7-max",
+	color: Color::Green
+}
+let serialized = serde_json::to_string(&yu7).unwrap();
+println!("{}", serialized); 
+// {"model": "yu7-max", "color": "Green"}
+let deserialized = serde_json::from_str(&serialized).unwrap();
+```
