@@ -25,6 +25,12 @@ use axum_extra::TypedHeader;
 use futures_util::stream::{self, Stream};
 use tokio_stream::StreamExt;
 
+#[tokio::main]
+async fn main() {
+	let router = Router::new()
+		.route("/sse", get(sse_handler))
+}
+
 async fn sse_handler(TypedHeader(user_agent):TypeHeader<headers::UserAgent>) 
 	-> Sse(impl Stream<Item=Result<Event, Infallible>>)
 {

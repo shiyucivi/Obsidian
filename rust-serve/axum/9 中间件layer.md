@@ -43,8 +43,16 @@ let public_app = Router::new()
 	.router("/login", get(|| async { "Login success" }));
 let app = Router::new().nest("/api", api_app).nest("/public", public_app);
 ```
-### 1 `from_fn`和`from_extractor`构造中间件
-#### 1.1 `from_fn`
+也可以单独针对某个路由的处理方法设置中间件：
+```rust
+let api_app = Router::new()
+	.router("/profile", 
+		get(|| async { "User profile"})
+			.route_layer(middleware::from_fn(require_auth))
+	);
+```
+### 2 `from_fn`和`from_extractor`构造中间件
+#### 2.1 `from_fn`
 使用`axum::middleware::from_fn`可以将一个async函数包装为一个中间件函数。被包装的async函数有两个参数：`Request`和`Next`，`Request`就是请求提取器。`Next`则是下一步处理的包装器，`Next`拥有一个异步方法`run`，代表被所有下一步处理后返回的数据即`Response`。
 ```rust
 use axum::{
@@ -69,7 +77,7 @@ async fn print_request_response<B>(req: Request<B>, next: Next<B>) -> Response {
 - 最后一个参数必须是`Next`
 - 返回值必须是`impl IntoResponse`的类型
 `from_fn`适合简单、快速、适合逻辑不复杂的中间件，如日志、认证、数据统计等场景。对于拥有复杂状态和生命周期的中间件需要考虑使用`tower::Service`构建。
-##### 1.1.1 在`from_fn`中消费body
+##### 2.1.1 在`from_fn`中消费body
 作为中间件的函数中倒数第二个`request`参数是拥有对整个请求数据的所有权的，因此调用`next.run`执行下一步操作时，必须传入原本的`req`参数。否则下一步会接收不到。
 如果在中间件函数中消费了body，必须对body进行重组：
 ```rust
@@ -86,7 +94,7 @@ let req = Request::from_parts(parts, Body::from(bytes));
 // 交给下一步处理
 next.run(req).await;
 ```
-#### 1.2 `from_extractor`
+#### 2.2 `from_extractor`
 `from_extractor`允许把一个`extractor`类型（实现了`FromRequest`或`FromRequestParts`）作为中间件。这个中间件只关心提取是否成功，不成功则提前返回响应。不保留提取结果也不关心后续处理。
 ```rust
 // 将一个自定义extractor RequireAuth作为`from_extractor`中间件
